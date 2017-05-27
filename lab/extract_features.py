@@ -13,11 +13,24 @@ def read_figure(path: str) -> list:
     return img
 
 
-def extract_hist(img: list) -> list:
+def extract_hist_RGB(img: list) -> list:
 
     [hist, _] = np.histogram(img.ravel(), 256, [0, 256])
 
     return hist
+
+
+def extract_hist_HLS(img: list) -> list:
+    """ 
+    Take as an input an RGB image 
+    """
+
+    imageHLS = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    ch1 = cv2.calcHist([imageHLS], channels=[0], mask=None, histSize=[180], ranges=[0, 179])
+    ch2 = cv2.calcHist([imageHLS], channels=[1], mask=None, histSize=[256], ranges=[0, 255])
+    ch3 = cv2.calcHist([imageHLS], channels=[2], mask=None, histSize=[256], ranges=[0, 255])
+
+    return np.concatenate([ch1, ch2, ch3]).reshape(-1)
 
 
 def extract_features():
@@ -31,21 +44,21 @@ def extract_features():
 
     n = len(train_set)
 
-    data_hog_features = np.zeros([N, 256], dtype=np.int)
-    data_types = np.zeros(N, dtype=np.int)
+    data_hist_features = np.zeros([n, 692], dtype=np.int)
+    data_types = np.zeros(n, dtype=np.int)
 
-    for i in range(N):
-        sys.stdout.write('\rReading %.1f%%' % float(100*i/n))
+    for i in range(n):
+        sys.stdout.write('\rReading %.2f%%' % float(100*i/n))
         sys.stdout.flush()
 
         img = read_figure('../data/train_jpg/' + train_set[i])
-        data_hog_features[i] = extract_hist(img)
+        data_hist_features[i] = extract_hist_HLS(img)
 
         for el in atm_types:
             if df[el].values[i] == 1:
                 data_types[i] = dic_atm_types[el]
 
-    np.savetxt('../data/histogram_features.csv', X=data_hog_features,  fmt='%d')
+    np.savetxt('../data/histogram_HLS_features.csv', X=data_hist_features,  fmt='%d')
     np.savetxt('../data/atm_types.csv', X=data_types, fmt='%d')
 
 
@@ -54,4 +67,4 @@ if __name__ == "__main__":
     extract_features()
     end = time.time()
 
-    print('%.2fs' % (end-start))
+    print('\n%.2fs' % (end-start))
